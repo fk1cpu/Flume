@@ -6,6 +6,7 @@ import VideoCard from '../components/VideoCard';
 import CategoryPill from '../components/CategoryPill';
 import { COLORS, SPACING } from '../utils/theme';
 import { fetchVideos, filterByCategory, searchVideos } from '../utils/helpers';
+import { fetchTrendingMovies, fetchTrendingTV, LEGAL_VIDEO_SAMPLES } from '../services/api';
 
 interface HomeScreenProps {
   onVideoPress: (item: VideoItem) => void;
@@ -18,8 +19,9 @@ export const HomeScreen = ({ onVideoPress }: HomeScreenProps) => {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [contentType, setContentType] = useState<'all' | 'movies' | 'tv'>('all');
 
-  // Load videos on mount
+  // Load videos on mount - using TMDB API for metadata
   useFocusEffect(
     useCallback(() => {
       loadVideos();
@@ -29,11 +31,29 @@ export const HomeScreen = ({ onVideoPress }: HomeScreenProps) => {
   const loadVideos = async () => {
     try {
       setLoading(true);
-      const data = await fetchVideos();
+      let data: VideoItem[] = [];
+      
+      // Fetch from TMDB API based on selected content type
+      if (contentType === 'movies') {
+        data = await fetchTrendingMovies();
+      } else if (contentType === 'tv') {
+        data = await fetchTrendingTV();
+      } else {
+        // Fetch both and combine
+        const [movies, tv] = await Promise.all([
+          fetchTrendingMovies(),
+          fetchTrendingTV()
+        ]);
+        data = [...movies, ...tv];
+      }
+      
       setVideos(data);
       setFilteredVideos(data);
     } catch (error) {
       console.error('Error loading videos:', error);
+      // Fallback to legal samples on error
+      setVideos(LEGAL_VIDEO_SAMPLES as VideoItem[]);
+      setFilteredVideos(LEGAL_VIDEO_SAMPLES as VideoItem[]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -80,6 +100,19 @@ export const HomeScreen = ({ onVideoPress }: HomeScreenProps) => {
   const renderHeader = useMemo(() => (
     <View style={styles.headerContainer}>
       <Text style={styles.title}>Flume</Text>
+      
+      {/* Content type selector */}
+      <View style={styles.typeSelector}>
+        {(['all', 'movies', 'tv'] as const).map((type) => (
+          <CategoryPill
+            key={type}
+            label={type.charAt(0).toUpperCase() + type.slice(1)}
+            isSelected={contentType === type}
+            onPress={() => setContentType(type)}
+          />
+        ))}
+      </View>
+      
       {/* Category pills - horizontal scroll */}
       <FlatList
         horizontal
@@ -95,8 +128,15 @@ export const HomeScreen = ({ onVideoPress }: HomeScreenProps) => {
         )}
         contentContainerStyle={styles.categoriesContainer}
       />
+      
+      {/* API Notice */}
+      <View style={styles.apiNotice}>
+        <Text style={styles.apiNoticeText}>
+          Metadata by TMDB • Demo uses legal free content
+        </Text>
+      </View>
     </View>
-  ), [selectedCategory, handleCategorySelect]);
+  ), [selectedCategory, handleCategorySelect, contentType]);
 
   if (loading && videos.length === 0) {
     return (
@@ -174,6 +214,23 @@ const styles = StyleSheet.create({
   },
   categoriesContainer: {
     paddingHorizontal: SPACING.xs,
+  },
+  typeSelector: {
+    flexDirection: 'row',
+    marginBottom: SPACING.sm,
+    paddingHorizontal: SPACING.xs,
+  },
+  apiNotice: {
+    marginTop: SPACING.sm,
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: SPACING.xs,
+    backgroundColor: COLORS.surface,
+    borderRadius: 8,
+  },
+  apiNoticeText: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    textAlign: 'center',
   },
   emptyContainer: {
     flex: 1,

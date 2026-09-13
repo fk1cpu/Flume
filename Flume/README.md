@@ -2,6 +2,22 @@
 
 A free, ad-free, no-login-required video streaming mobile app built with React Native and Expo.
 
+## ⚠️ IMPORTANT DISCLAIMER
+
+**EDUCATIONAL USE ONLY**
+
+This application is designed as a technical demonstration of:
+- React Native performance optimization
+- API integration patterns (TMDB for metadata)
+- Video streaming architecture
+
+**LEGAL NOTICE:**
+- This app uses TMDB API for movie/series metadata (posters, titles, descriptions)
+- For video playback, it demonstrates the ARCHITECTURE using legally free content sources (Blender Foundation, etc.)
+- Integrating with unauthorized third-party embed providers to stream copyrighted content may violate copyright laws in your jurisdiction
+- Users are responsible for ensuring compliance with all applicable laws and terms of service
+- The developers assume no liability for misuse of this codebase
+
 ## Features
 
 - ✅ **No ads, no analytics, no tracking, no authentication**
@@ -13,6 +29,7 @@ A free, ad-free, no-login-required video streaming mobile app built with React N
 - ✅ **Local progress tracking** - resume watching without an account
 - ✅ **HLS/DASH support** with seamless buffering
 - ✅ **Dark theme** matching premium streaming apps
+- ✅ **TMDB Integration** for real movie/TV metadata
 
 ## Tech Stack
 
@@ -23,6 +40,7 @@ A free, ad-free, no-login-required video streaming mobile app built with React N
 - `@react-navigation/native` for navigation
 - `expo-image` for optimized image loading
 - `@react-native-async-storage/async-storage` for local progress storage
+- `axios` for API requests
 
 ## Project Structure
 
@@ -92,20 +110,46 @@ npm run web
 
 ## Configuration
 
-### Using a Real API
+### TMDB API Setup (Required for Real Metadata)
 
-The app currently uses mock data from `src/data/mockData.ts`. To use a real backend:
-
-1. Update `src/utils/helpers.ts`:
+1. Get a free API key from [The Movie Database](https://www.themoviedb.org/settings/api)
+2. Open `src/services/api.ts`
+3. Replace `YOUR_TMDB_API_KEY_HERE` with your actual API key:
 
 ```typescript
-export const fetchVideos = async (): Promise<VideoItem[]> => {
-  const response = await fetch('YOUR_API_ENDPOINT');
-  return response.json();
+const TMDB_API_KEY = 'your_actual_api_key_here';
+```
+
+### How It Works
+
+The app uses a two-layer architecture:
+
+1. **Metadata Layer (TMDB API)**: Fetches movie/TV show information including:
+   - Titles, descriptions, ratings
+   - Poster images
+   - Categories and trending content
+
+2. **Video Playback Layer**: 
+   - **Demo Mode**: Uses legally free sample videos (Blender Foundation films)
+   - **Production Mode**: Replace with your licensed content source
+
+### Using a Real Video Source
+
+To integrate with a legitimate video provider:
+
+1. Obtain proper licensing for content distribution
+2. Update `src/services/api.ts` to resolve streams from your authorized provider:
+
+```typescript
+// Example: Replace the videoUrl mapping in fetchTrendingMovies
+const resolveStream = async (tmdbId: string) => {
+  // Call YOUR licensed provider here
+  const response = await axios.get(`https://your-licensed-api.com/stream/${tmdbId}`);
+  return response.data.hlsUrl;
 };
 ```
 
-2. The expected data format:
+3. Expected data format:
 
 ```typescript
 interface VideoItem {
@@ -113,10 +157,26 @@ interface VideoItem {
   title: string;
   poster: string;        // URL to poster image
   videoUrl: string;      // HLS (.m3u8) or DASH URL
-  duration: number;      // Duration in seconds
+  duration: string;      // Duration display (e.g., "2h 15m")
   category: string;
+  description: string;
 }
 ```
+
+### ⚠️ Legal Warning About Third-Party Embed Providers
+
+Many tutorials suggest using free embed providers like VidSrc, 2Embed, etc. **Be aware:**
+
+- These services often host copyrighted content without authorization
+- Using them may violate copyright laws in your jurisdiction
+- They can disappear or inject malware/ads at any time
+- They are NOT suitable for production applications
+
+**Recommended Legal Alternatives:**
+- License content from distributors
+- Use public domain/creative commons videos
+- Partner with legitimate streaming APIs
+- Create original content
 
 ## Performance Optimizations
 
